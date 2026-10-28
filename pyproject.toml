@@ -23,7 +23,7 @@ docext = "docext.cli:app"
 [dependency-groups]
 dev = [
     "pytest>=8.2",
-    "pytest-cov>=5.0",
+    "pytest-cov>=7.1.0",
     "pytest-asyncio>=0.23",
     "ruff>=0.14",
     "mypy>=1.10",
