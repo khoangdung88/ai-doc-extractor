@@ -11,11 +11,12 @@ input formats.
 
 ```
 ┌───────────────────────── adapters ──────────────────────────┐
-│  api/ (FastAPI)                      cli.py (Typer)          │
+│  api/ (FastAPI + single-file UI)     cli.py (Typer)          │
 └───────────────┬─────────────────────────────┬───────────────┘
                 ▼                             ▼
 ┌───────────────────── extraction/ ───────────────────────────┐
 │ pipeline.py  ─ orchestrates one extraction                  │
+│ classification.py ─ per-page auto type detection            │
 │ prompts/     ─ versioned prompt files + loader              │
 │ providers/   ─ ModelProvider plugins (mock, openai, …)      │
 │ json_repair.py ─ tolerant parsing of model output           │
@@ -36,7 +37,7 @@ violations with grep guards (`.github/workflows/ci.yml` → *architecture guard*
 
 ## Request lifecycle (`POST /v1/extract`)
 
-1. **Adapter** receives file bytes + `type` + optional `model`; validates size.
+1. **Adapter** receives file bytes + optional `type` + optional `model`; validates size.
 2. **Ingestion** sniffs MIME by content (`detect.py`), picks a `Loader`, returns a `Document`
    (pages with text, optional PNG renders for vision models, metadata).
 3. **Pipeline** looks up the `DocumentType` (schema + prompt version), renders the prompt with the schema's
@@ -45,9 +46,17 @@ violations with grep guards (`.github/workflows/ci.yml` → *architecture guard*
    `warnings()` (e.g. totals mismatch).
 5. **`ExtractionResult`** (data + model + prompt_version + usage + latency + warnings) is returned.
 
+### Auto mode (`type` omitted — ADR-0007)
+
+`extract_auto` first calls `classification.classify_pages`: one provider request labels every
+page with a registry type or `unknown`. Pages of the same type are merged into one
+sub-`Document` (wherever they appear) and extracted via the normal pipeline; unclassified
+pages are reported in `AutoExtractionResult.skipped_pages`. One provider instance serves the
+classify call and all extractions.
+
 ## Stable contracts (changing these needs an ADR)
 - `ingestion.base.Document` / `Page`
-- `extraction.pipeline.ExtractionResult`
+- `extraction.pipeline.ExtractionResult`, `AutoExtractionResult`
 - `extraction.providers.base.ModelProvider`, `ExtractionRequest`, `ProviderResponse`
 - `domain.base.BaseDocumentSchema`, `DocumentType`
 - Every document schema (`schema_version` field; breaking change → bump)
@@ -72,4 +81,4 @@ extraction with `doc_type`, `model`, `prompt_version`, token usage and latency. 
 
 ## Not yet (see `roadmap.md`)
 OCR / image input, vision-mode page images to models, async job queue for batch, persistence, web UI,
-evaluation harness with field-level accuracy, multi-document PDFs (split), auth.
+evaluation harness with field-level accuracy, auth.

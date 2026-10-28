@@ -78,3 +78,10 @@ class ExtractionValidationError(DocextError):
 
     code = "extraction_validation_failed"
     http_status = 502
+
+
+class ClassificationError(DocextError):
+    """Auto document-type detection failed (provider error, unreadable output, no text)."""
+
+    code = "classification_failed"
+    http_status = 502

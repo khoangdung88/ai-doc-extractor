@@ -80,20 +80,42 @@ SAMPLES: dict[str, list[str]] = {
     ],
 }
 
+# Multi-page files mixing document types (auto-detection spec 0004). Values are page lists;
+# single-type pages are reused from SAMPLES so text never drifts.
+MULTI_PAGE: dict[str, list[list[str]]] = {
+    "combined/synthetic_combined_01.pdf": [
+        SAMPLES["invoice/synthetic_invoice_01.pdf"],
+        SAMPLES["packing_list/synthetic_packing_list_01.pdf"],
+        [
+            "COVER LETTER",
+            "Dear Sir/Madam,",
+            "Please find enclosed the commercial invoice and packing list for the",
+            "above-mentioned shipment. Do not hesitate to contact us for any question.",
+            "Best regards, ACME EXPORT CO., LTD",
+        ],
+    ],
+}
 
-def main() -> None:
-    for relative, lines in SAMPLES.items():
-        target = ROOT / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        doc = pymupdf.open()
+
+def _write_pdf(target: Path, pages: list[list[str]]) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    doc = pymupdf.open()
+    for lines in pages:
         page = doc.new_page()
         y = 72
         for line in lines:
             page.insert_text((50, y), line, fontsize=10, fontname="cour")
             y += 15
-        doc.save(target, garbage=4, deflate=True)
-        doc.close()
-        print(f"wrote {target.relative_to(ROOT.parents[2])} ({target.stat().st_size} B)")
+    doc.save(target, garbage=4, deflate=True)
+    doc.close()
+    print(f"wrote {target.relative_to(ROOT.parents[2])} ({target.stat().st_size} B)")
+
+
+def main() -> None:
+    for relative, lines in SAMPLES.items():
+        _write_pdf(ROOT / relative, [lines])
+    for relative, pages in MULTI_PAGE.items():
+        _write_pdf(ROOT / relative, pages)
 
 
 if __name__ == "__main__":

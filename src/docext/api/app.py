@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 from docext import __version__
 from docext.api.errors import install_error_handlers
-from docext.api.routes import extract, meta
+from docext.api.routes import extract, meta, preview, ui
 from docext.core.config import get_settings
 from docext.core.logging import configure_logging
 
@@ -20,6 +20,8 @@ def create_app() -> FastAPI:
         description="AI extraction of structured data from shipping documents.",
     )
     install_error_handlers(app)
+    app.include_router(ui.router)
     app.include_router(meta.router)
     app.include_router(extract.router, prefix="/v1")
+    app.include_router(preview.router, prefix="/v1")
     return app

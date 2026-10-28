@@ -21,3 +21,14 @@ def test_cli_extract_writes_json(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.output
     assert '"document_type": "invoice"' in result.output
+
+
+def test_cli_extract_without_type_auto_detects(tmp_path: Path) -> None:
+    pdf = tmp_path / "combined.pdf"
+    pdf.write_bytes(make_pdf(["INVOICE INV-9"]))
+
+    result = runner.invoke(app, ["extract", str(pdf), "--model", "mock:echo"])
+
+    assert result.exit_code == 0, result.output
+    assert '"results"' in result.output
+    assert '"skipped_pages"' in result.output

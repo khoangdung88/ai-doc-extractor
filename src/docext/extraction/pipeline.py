@@ -16,6 +16,7 @@ from docext.core.config import Settings, get_settings
 from docext.core.errors import ExtractionValidationError, InputTooLargeError
 from docext.core.logging import get_logger
 from docext.domain.registry import get_document_type
+from docext.extraction.classification import UNKNOWN, classify_pages
 from docext.extraction.json_repair import parse_json_output
 from docext.extraction.prompts.loader import load_prompt
 from docext.extraction.providers.base import ExtractionRequest, ModelProvider, Usage
@@ -39,6 +40,24 @@ class ExtractionResult(BaseModel):
     pages: int = 0
     source_name: str | None = None
     extracted_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class SkippedPages(BaseModel):
+    """Pages auto-detection could not assign to any registered document type."""
+
+    model_config = ConfigDict(frozen=True)
+
+    pages: list[int]
+    reason: str
+
+
+class AutoExtractionResult(BaseModel):
+    """Response for extraction without an explicit type (spec 0004 / ADR-0007)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    results: list[ExtractionResult]
+    skipped_pages: list[SkippedPages] = Field(default_factory=list)
 
 
 async def extract(
@@ -128,3 +147,60 @@ async def extract(
         warnings=len(result.warnings),
     )
     return result
+
+
+async def extract_auto(
+    document: Document,
+    model: str | None = None,
+    *,
+    settings: Settings | None = None,
+    provider: ModelProvider | None = None,
+) -> AutoExtractionResult:
+    """Auto-detect document types per page, then extract each detected type once.
+
+    Pages of the same type are merged into one extraction; `unknown` pages are skipped and
+    reported. One provider instance serves the classify call and every extraction.
+    """
+    settings = settings or get_settings()
+    spec = model or settings.default_model
+    provider_name, model_name = resolve_model(spec)
+
+    owned = provider is None
+    provider = provider or create_provider(provider_name, settings)
+    try:
+        labels = await classify_pages(document, provider, model_name, settings=settings)
+        pages_by_type: dict[str, list[int]] = {}
+        for page_number, label in sorted(labels.items()):
+            if label != UNKNOWN:
+                pages_by_type.setdefault(label, []).append(page_number)
+
+        results = [
+            await extract(
+                _sub_document(document, page_numbers),
+                doc_type,
+                spec,
+                settings=settings,
+                provider=provider,
+            )
+            for doc_type, page_numbers in pages_by_type.items()
+        ]
+        skipped = sorted(n for n, label in labels.items() if label == UNKNOWN)
+        return AutoExtractionResult(
+            results=results,
+            skipped_pages=[SkippedPages(pages=skipped, reason="unrecognized document type")]
+            if skipped
+            else [],
+        )
+    finally:
+        if owned:
+            await provider.close()
+
+
+def _sub_document(document: Document, page_numbers: list[int]) -> Document:
+    wanted = set(page_numbers)
+    return Document(
+        filename=document.filename,
+        mime_type=document.mime_type,
+        pages=[p for p in document.pages if p.number in wanted],
+        metadata=dict(document.metadata),
+    )

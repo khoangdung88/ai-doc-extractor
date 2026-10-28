@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 
 from docext.core.config import Settings
-from docext.core.errors import InputTooLargeError, ProviderError
+from docext.core.errors import InputTooLargeError, ProviderError, ProviderTimeoutError
 from docext.extraction.providers._http import make_client, post_json
 from docext.extraction.providers.base import (
     ExtractionRequest,
@@ -72,6 +72,26 @@ class OllamaProvider(ModelProvider):
     def capabilities(self) -> ProviderCapabilities:
         return ProviderCapabilities(vision=True, json_mode=True)
 
+    @classmethod
+    async def list_models(
+        cls, settings: Settings, client: httpx.AsyncClient | None = None
+    ) -> list[str]:
+        """Locally pulled models from `GET {ollama_base_url}/api/tags`."""
+        owned = client is None
+        client = client or make_client(settings, settings.ollama_base_url, {}, timeout_s=10)
+        try:
+            response = await client.get("/api/tags")
+        except httpx.TimeoutException as exc:
+            raise ProviderTimeoutError("ollama: request timed out") from exc
+        except httpx.HTTPError as exc:
+            raise ProviderError(f"ollama: transport error: {exc}") from exc
+        finally:
+            if owned:
+                await client.aclose()
+        if response.status_code >= 400:
+            raise ProviderError(f"ollama: HTTP {response.status_code}")
+        return [m["name"] for m in response.json().get("models", []) if m.get("name")]
+
     async def extract_structured(self, request: ExtractionRequest) -> ProviderResponse:
         user: dict[str, Any] = {"role": "user", "content": request.user_prompt}
         if request.images_png:
@@ -79,6 +99,9 @@ class OllamaProvider(ModelProvider):
         payload: dict[str, Any] = {
             "model": request.model,
             "stream": False,
+            # Thinking models (qwen3-*, deepseek) emit reasoning before JSON, which breaks
+            # parsing — disabled; ignored by models without thinking support.
+            "think": False,
             "format": request.json_schema,
             "options": {
                 "temperature": request.temperature,

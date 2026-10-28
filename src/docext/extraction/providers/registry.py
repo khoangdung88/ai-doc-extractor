@@ -17,6 +17,13 @@ PROVIDERS: dict[str, type[ModelProvider]] = {
     OllamaProvider.name: OllamaProvider,
 }
 
+# Provider name -> Settings field holding its API credential. Used to apply a per-request
+# `api_key` override (web UI, ADR-0008). Providers absent here take no key.
+CREDENTIAL_SETTINGS: dict[str, str] = {
+    "openai": "openai_api_key",
+    "anthropic": "anthropic_api_key",
+}
+
 
 def resolve_model(spec: str) -> tuple[str, str]:
     """`"openai:gpt-4o-mini"` → `("openai", "gpt-4o-mini")`."""

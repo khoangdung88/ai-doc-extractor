@@ -1,0 +1,38 @@
+# VCS / agents / docs
+.git
+.github
+.agent
+.cursor
+docs
+AGENTS.md
+CLAUDE.md
+
+# Python artifacts
+.venv
+__pycache__
+*.py[cod]
+.egg-info
+dist
+build
+.mypy_cache
+.ruff_cache
+.pytest_cache
+.coverage
+htmlcov
+
+# Secrets and local data — never inside the image
+.env
+.env.*
+!.env.example
+data
+
+# Tests and tooling (not needed at runtime)
+tests
+scripts
+.pre-commit-config.yaml
+Makefile
+
+# Docker build files themselves
+Dockerfile
+.dockerignore
+docker-compose.yml

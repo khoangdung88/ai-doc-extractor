@@ -25,18 +25,23 @@ def _init(verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False) -> 
 @app.command()
 def extract(
     path: Annotated[Path, typer.Argument(exists=True, readable=True, help="Document file")],
-    type: Annotated[str, typer.Option("--type", "-t", help="invoice | packing_list | ...")],
+    type: Annotated[
+        str | None,
+        typer.Option("--type", "-t", help="invoice | packing_list | ... (omit to auto-detect)"),
+    ] = None,
     model: Annotated[str | None, typer.Option("--model", "-m", help="<provider>:<model>")] = None,
     output: Annotated[Path | None, typer.Option("--output", "-o", help="Write JSON here")] = None,
 ) -> None:
     """Extract structured data from one document."""
     from docext.extraction.pipeline import extract as run_extraction
+    from docext.extraction.pipeline import extract_auto
     from docext.ingestion.registry import load_document
 
     async def _run() -> str:
         document = await load_document(path.read_bytes(), path.name)
-        result = await run_extraction(document, type, model)
-        return result.model_dump_json(indent=2)
+        if type is None:
+            return (await extract_auto(document, model)).model_dump_json(indent=2)
+        return (await run_extraction(document, type, model)).model_dump_json(indent=2)
 
     try:
         text = asyncio.run(_run())

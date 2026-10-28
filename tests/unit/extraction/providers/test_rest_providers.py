@@ -33,7 +33,7 @@ def client_returning(
     status: int, body: dict[str, Any], seen: list[dict[str, Any]]
 ) -> httpx.AsyncClient:
     def handler(request: httpx.Request) -> httpx.Response:
-        seen.append(json.loads(request.content))
+        seen.append(json.loads(request.content) if request.content else {})
         return httpx.Response(status, json=body)
 
     return httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://test")
@@ -83,6 +83,15 @@ async def test_anthropic_without_tool_use_is_provider_error(settings: Settings) 
 
     with pytest.raises(ProviderError):
         await provider.extract_structured(REQUEST)
+
+
+async def test_ollama_lists_local_models(settings: Settings) -> None:
+    seen: list[dict[str, Any]] = []
+    body = {"models": [{"name": "qwen3-coder:latest"}, {"name": "qwen2.5:7b"}, {}]}
+
+    models = await OllamaProvider.list_models(settings, client=client_returning(200, body, seen))
+
+    assert models == ["qwen3-coder:latest", "qwen2.5:7b"]
 
 
 async def test_ollama_passes_schema_as_format(settings: Settings) -> None:

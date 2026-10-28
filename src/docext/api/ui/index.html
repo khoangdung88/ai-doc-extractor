@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>docext — document extraction</title>
+<style>
+  :root { --border:#d9dee4; --muted:#68727d; --accent:#1f6feb; --warn:#9a6700; }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; margin:0; color:#1f2328;
+         background:#f6f8fa; }
+  header { background:#fff; border-bottom:1px solid var(--border); padding:12px 24px;
+           font-weight:600; }
+  main { max-width:1180px; margin:24px auto; padding:0 16px; display:grid; gap:16px; }
+  .panel { background:#fff; border:1px solid var(--border); border-radius:8px; padding:16px; }
+  .panel h2 { margin:0 0 12px; font-size:14px; text-transform:uppercase; letter-spacing:.04em;
+              color:var(--muted); }
+  .row { display:flex; gap:12px; flex-wrap:wrap; align-items:end; }
+  label { display:grid; gap:4px; font-size:13px; color:var(--muted); }
+  select,input[type=text],input[type=password] { font:inherit; padding:6px 8px;
+           border:1px solid var(--border); border-radius:6px; min-width:200px; }
+  .hint { font-size:12px; color:var(--muted); }
+  button { font:inherit; padding:7px 16px; border:0; border-radius:6px; cursor:pointer;
+           background:var(--accent); color:#fff; }
+  button:disabled { opacity:.5; cursor:default; }
+  .file-chip { font-size:13px; padding:2px 0; }
+  #results { display:grid; gap:12px; }
+  .card { background:#fff; border:1px solid var(--border); border-radius:8px; padding:16px; }
+  .card h3 { margin:0 0 4px; font-size:15px; }
+  .status { font-size:13px; color:var(--muted); }
+  .status.error { color:#cf222e; }
+  .status.ok { color:#1a7f37; }
+  .doc { border:1px solid var(--border); border-radius:6px; margin-top:12px; }
+  .doc > summary { padding:8px 12px; cursor:pointer; font-weight:600; }
+  .doc .body { padding:0 12px 12px; }
+  table { border-collapse:collapse; width:100%; font-size:13px; margin-top:8px;
+          table-layout:fixed; }
+  td,th { border-top:1px solid var(--border); padding:5px 8px; text-align:left;
+          vertical-align:top; }
+  th { color:var(--muted); font-weight:600; }
+  td.k { width:36%; max-width:200px; color:#57606a; font-family:ui-monospace,Consolas,monospace; }
+  .null { color:#aab3bb; }
+  .warn { background:#fff8e6; border:1px solid #f0d489; border-radius:6px; padding:8px 10px;
+          font-size:13px; margin-top:10px; color:var(--warn); }
+  .meta { font-size:12px; color:var(--muted); margin-top:10px; }
+  .skipped { font-size:13px; color:var(--muted); margin-top:10px; font-style:italic; }
+  details.raw { margin-top:10px; }
+  details.raw summary { cursor:pointer; font-size:13px; color:var(--accent); }
+  pre { background:#f6f8fa; border:1px solid var(--border); border-radius:6px; padding:10px;
+        overflow:auto; font-size:12px; }
+  .dl { font-size:13px; color:var(--accent); cursor:pointer; margin-left:12px; }
+  .review { display:flex; gap:14px; margin-top:12px; }
+  .docs { flex:1; min-width:0; }
+  input.cell, textarea.cell { width:100%; font:inherit; font-size:13px; padding:3px 6px;
+    border:1px solid var(--border); border-radius:4px; background:#fff; }
+  input.cell:focus, textarea.cell:focus { outline:none; border-color:var(--accent);
+    box-shadow:0 0 0 2px rgba(31,111,235,.15); }
+  button.apply, button.revbtn { font-size:13px; padding:4px 12px; margin-top:8px; }
+  button.apply { background:#1a7f37; }
+  button.revbtn { background:#57606a; margin-left:8px; }
+  .edited { font-size:11px; color:#1a7f37; border:1px solid #1a7f37; border-radius:8px;
+    padding:1px 6px; margin-left:8px; }
+</style>
+</head>
+<body>
+<header>docext — shipping document extraction</header>
+<main>
+  <section class="panel">
+    <h2>Step 1 — Model &amp; API key</h2>
+    <div class="row">
+      <label>Provider
+        <select id="provider"></select>
+      </label>
+      <label>Model
+        <input type="text" id="model" placeholder="e.g. gpt-4o-mini">
+        <select id="model-select" hidden></select>
+      </label>
+      <label id="key-row" hidden>API key
+        <input type="password" id="api-key" autocomplete="off"
+               placeholder="sent with each request — never stored">
+      </label>
+    </div>
+    <div class="hint">Pick a provider, then a model — providers that can list their own models
+      (e.g. Ollama) show a dropdown. An API key is only asked when the provider needs one;
+      it is sent with each request and never stored.</div>
+  </section>
+
+  <section class="panel">
+    <h2>Step 2 — Choose files</h2>
+    <div class="row">
+      <input type="file" id="files" multiple accept=".pdf,application/pdf">
+      <button id="extract" disabled>Extract</button>
+    </div>
+    <div class="hint">Select one or more PDFs — every file is auto-classified per page
+      (invoice · packing list · booking confirmation), so a combined invoice + packing list
+      works as-is. Then click <b>Extract</b>.</div>
+    <div id="file-list"></div>
+  </section>
+
+  <section class="panel" id="results-panel" hidden>
+    <h2>Step 3 — Results</h2>
+    <div id="results"></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let PROVIDERS = {};
+const SUGGESTED_MODELS = {
+  mock: "echo",
+  openai: "gpt-4o-mini",
+  anthropic: "claude-3-5-sonnet-latest",
+  ollama: "qwen2.5:7b",
+};
+
+async function init() {
+  const cfg = await (await fetch("/v1/config")).json();
+  cfg.providers.forEach(p => PROVIDERS[p.name] = p.requires_api_key);
+  const sel = $("provider");
+  cfg.providers.forEach(p => sel.add(new Option(p.name, p.name)));
+  const [defProvider, defModel] = (cfg.default_model || ":").split(":");
+  sel.value = localStorage.getItem("docext.provider") || defProvider || cfg.providers[0]?.name;
+  $("model").value = localStorage.getItem("docext.model") || defModel || "";
+  toggleKeyRow();
+  await loadModels(sel.value);
+}
+$("provider").addEventListener("change", () => {
+  toggleKeyRow();
+  // provider-specific default so a stale model name never leaks across providers
+  $("model").value = SUGGESTED_MODELS[$("provider").value] || "";
+  loadModels($("provider").value);
+});
+function toggleKeyRow() {
+  $("key-row").hidden = !PROVIDERS[$("provider").value];
+}
+// Providers that can enumerate their models (e.g. Ollama /api/tags) get a dropdown;
+// anything else keeps the free-text input.
+async function loadModels(provider) {
+  const sel = $("model-select"), input = $("model");
+  try {
+    const r = await fetch(`/v1/models?provider=${encodeURIComponent(provider)}`);
+    const body = await r.json();
+    if (r.ok && body.models && body.models.length) {
+      sel.innerHTML = "";
+      body.models.forEach(m => sel.add(new Option(m, m)));
+      sel.hidden = false; input.hidden = true;
+      return;
+    }
+  } catch (_) { /* discovery unavailable → free text */ }
+  sel.hidden = true; input.hidden = false;
+}
+function currentModel() {
+  return $("model-select").hidden ? $("model").value : $("model-select").value;
+}
+function persist() {
+  localStorage.setItem("docext.provider", $("provider").value);
+  localStorage.setItem("docext.model", currentModel());
+}
+
+$("files").addEventListener("change", () => {
+  const list = $("file-list");
+  list.innerHTML = "";
+  for (const f of $("files").files)
+    list.insertAdjacentHTML("beforeend", `<div class="file-chip">📄 ${esc(f.name)}</div>`);
+  $("extract").disabled = !$("files").files.length;
+});
+
+$("extract").addEventListener("click", async () => {
+  persist();
+  const btn = $("extract");
+  btn.disabled = true;
+  const model = `${$("provider").value}:${currentModel()}`;
+  const apiKey = $("api-key").value;
+  const jobs = [...$("files").files].map(file => {
+    const card = addCard(file);
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("model", model);
+    if (apiKey) fd.append("api_key", apiKey);
+    return fetch("/v1/extract", {method: "POST", body: fd})
+      .then(async r => ({ok: r.ok, body: await r.json()}))
+      .then(({ok, body}) => ok ? renderResult(card, body) : renderError(card, body))
+      .catch(e => renderError(card, {error: {code: "network", message: String(e)}}));
+  });
+  await Promise.allSettled(jobs);
+  btn.disabled = false;
+});
+
+function addCard(file) {
+  $("results-panel").hidden = false;
+  const card = document.createElement("div");
+  card.className = "card";
+  card.id = `card-${++CARD_SEQ}`;
+  card._file = file;
+  card.innerHTML = `<h3>${esc(file.name)}</h3><div class="status">processing… 0s</div>`;
+  $("results").prepend(card);
+  const statusEl = card.querySelector(".status"), t0 = performance.now();
+  card._elapsed = () => ((performance.now() - t0) / 1000).toFixed(1);
+  card._timer = setInterval(
+    () => { statusEl.textContent = `processing… ${Math.round(card._elapsed())}s`; }, 500);
+  return card;
+}
+function renderError(card, body) {
+  clearInterval(card._timer);
+  const e = body?.error || {code: "error", message: JSON.stringify(body)};
+  const det = (e.details && Object.keys(e.details).length)
+    ? `<div class="meta">${esc(JSON.stringify(e.details)).slice(0, 400)}</div>` : "";
+  card.querySelector(".status").outerHTML =
+    `<div class="status error">✕ ${esc(e.code)}: ${esc(e.message)} — ${card._elapsed()}s${det}</div>`;
+}
+let CARD_SEQ = 0, DOC_SEQ = 0;
+
+function renderResult(card, body) {
+  clearInterval(card._timer);
+  card._result = body;
+  const secs = card._elapsed();
+  const results = body.results || [body];
+  const skipped = body.skipped_pages || [];
+  card.querySelector(".status").outerHTML = results.length
+    ? `<div class="status ok">✓ ${results.length} document type(s) detected — ${secs}s</div>`
+    : `<div class="status">✓ 0 document type(s) detected — ${secs}s — every page was skipped.
+       (mock:echo never detects; use a real provider/model or check your API key)</div>`;
+
+  for (const r of results) card.appendChild(docSection(card, r));
+  if (skipped.length)
+    card.insertAdjacentHTML("beforeend",
+      `<div class="skipped">Skipped pages: ${skipped.map(s => s.pages.join(", "))
+         .join("; ")} (${esc(skipped[0].reason)})</div>`);
+  card.insertAdjacentHTML("beforeend",
+    `<details class="raw"><summary>raw JSON</summary><pre>${esc(JSON.stringify(body, null, 2))}</pre></details>
+     <a class="dl">download JSON</a>`);
+  card.querySelector(".dl").onclick = () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(
+      new Blob([JSON.stringify(card._result, null, 2)], {type: "application/json"}));
+    a.download = card._file.name + ".json";
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+}
+function docSection(card, r) {
+  const det = document.createElement("details");
+  det.className = "doc"; det.open = true;
+  det.id = `doc-${++DOC_SEQ}`;
+  det.innerHTML =
+    `<summary>${esc(r.document_type)} <span class="meta">
+       — model ${esc(r.model)}, prompt ${esc(r.prompt_version)},
+       ${r.pages} page(s), ${r.latency_ms} ms, tokens
+       ${r.usage.input_tokens ?? "?"}→${r.usage.output_tokens ?? "?"}</span>
+       <span class="edited" hidden>edited</span></summary>
+     <div class="body">${fieldsTable(r.data)}${warnings(r.warnings)}
+       <button class="apply">Apply edits</button>
+       <button class="revbtn">↗ review in new tab</button></div>`;
+  det.querySelector(".apply").onclick = () => applyEdits(card, det, r);
+  det.querySelector(".revbtn").onclick = () => openReview(card, r, det.id);
+  return det;
+}
+
+// --- review: open a dedicated full-width tab, PDF left / editable fields right ---
+// The child page mutates the shared result object; Apply calls __syncReview back here.
+window.__syncReview = (cardId, docId) => {
+  const card = document.getElementById(cardId);
+  if (!card) return;
+  const doc = document.getElementById(docId);
+  if (doc) doc.querySelector(".edited").hidden = false;
+  const pre = card.querySelector("details.raw pre");
+  if (pre) pre.textContent = JSON.stringify(card._result, null, 2);
+};
+
+function openReview(card, r, docId) {
+  const w = window.open("", "_blank");
+  if (!w) { alert("Popup blocked — allow popups for this page"); return; }
+  const fns = [esc, fieldsTable, fieldRow, input, arrEdit, cellEdit, coerce, collectEdits]
+    .map(f => f.toString()).join("\n");
+  w.__ctx = {
+    result: r, cardId: card.id, docId, file: card._file.name,
+    pdfUrl: URL.createObjectURL(card._file),
+  };
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>review — ${esc(card._file.name)}</title><style>
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; color:#1f2328; }
+  header { display:flex; align-items:center; gap:14px; padding:10px 18px;
+    border-bottom:1px solid #d9dee4; background:#fff; }
+  header .meta { color:#68727d; font-size:13px; }
+  #wrap { display:flex; height:calc(100vh - 53px); }
+  iframe { width:45%; height:100%; border:0; border-right:1px solid #d9dee4; }
+  #fields { flex:1; overflow:auto; padding:14px 18px; }
+  table { border-collapse:collapse; width:100%; font-size:13px; table-layout:fixed; }
+  td,th { border-top:1px solid #d9dee4; padding:5px 8px; text-align:left; vertical-align:top; }
+  th { color:#68727d; }
+  td.k { width:36%; max-width:200px; color:#57606a; font-family:ui-monospace,Consolas,monospace; }
+  .cell { width:100%; font:inherit; font-size:13px; padding:3px 6px;
+    border:1px solid #d9dee4; border-radius:4px; }
+  .cell:focus { outline:none; border-color:#1f6feb; }
+  button { font:inherit; padding:6px 16px; border:0; border-radius:6px; cursor:pointer;
+    background:#1a7f37; color:#fff; }
+  #saved { font-size:13px; color:#1a7f37; }
+  .dl { font-size:13px; color:#1f6feb; cursor:pointer; }
+</style></head><body>
+<header><b>${esc(card._file.name)}</b><span class="meta">${esc(r.document_type)}
+  — model ${esc(r.model)}</span>
+  <button id="apply">Apply edits</button><span id="saved"></span>
+  <a class="dl" id="dl">download JSON</a>
+  <span class="meta">keep the main tab open while reviewing</span></header>
+<div id="wrap"><iframe src="${w.__ctx.pdfUrl}"></iframe><div id="fields"></div></div>
+<script>${fns}
+const C = window.__ctx;
+document.getElementById("fields").innerHTML = fieldsTable(C.result.data);
+document.getElementById("apply").onclick = () => {
+  const n = collectEdits(document.getElementById("fields"), C.result.data);
+  document.getElementById("saved").textContent =
+    n ? "applied " + n + " change(s)" : "no changes";
+  if (n && window.opener && opener.__syncReview) opener.__syncReview(C.cardId, C.docId);
+};
+document.getElementById("dl").onclick = () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(C.result, null, 2)],
+    {type: "application/json"}));
+  a.download = C.file + ".json"; a.click();
+};
+<\/script></body></html>`);
+  w.document.close();
+}
+
+// --- editable field tree: every leaf renders an input carrying its JSON path ---
+function fieldsTable(data, path) {
+  path = path || "";
+  const entries = Object.entries(data || {}).filter(([k]) => k !== "schema_version");
+  const filled = entries.filter(([, v]) => v !== null && !(Array.isArray(v) && !v.length));
+  const empty  = entries.filter(([, v]) => v === null || (Array.isArray(v) && !v.length));
+  return `<table>${[...filled, ...empty].map(([k, v]) =>
+    fieldRow(path ? `${path}.${k}` : k, k, v)).join("")}</table>`;
+}
+function fieldRow(p, k, v) {
+  if (v === null) return `<tr><td class="k">${esc(k)}</td><td>${input(p, "")}</td></tr>`;
+  if (Array.isArray(v)) return `<tr><td class="k">${esc(k)}</td><td>${arrEdit(p, v)}</td></tr>`;
+  if (typeof v === "object")
+    return `<tr><td class="k">${esc(k)}</td><td>${fieldsTable(v, p)}</td></tr>`;
+  return `<tr><td class="k">${esc(k)}</td><td>${input(p, v)}</td></tr>`;
+}
+function input(p, v) {
+  const s = (v === null || v === undefined) ? "" : String(v);
+  if (s.length > 80 || s.includes("\n"))
+    return `<textarea class="cell" data-path="${esc(p)}" rows="3" placeholder="null">${esc(s)}</textarea>`;
+  return `<input class="cell" data-path="${esc(p)}" value="${esc(s)}" placeholder="null">`;
+}
+function arrEdit(p, arr) {
+  if (!arr.length) return `<span class="null">—</span>`;
+  if (arr.every(x => typeof x !== "object" || x === null))
+    return arr.map((x, i) => input(`${p}.${i}`, x)).join("");
+  const keys = [...new Set(arr.flatMap(o => Object.keys(o || {})))];
+  return `<table><tr>${keys.map(k => `<th>${esc(k)}</th>`).join("")}</tr>${
+    arr.map((o, i) => `<tr>${keys.map(k =>
+      `<td>${cellEdit(`${p}.${i}.${k}`, o?.[k])}</td>`).join("")}</tr>`).join("")}</table>`;
+}
+function cellEdit(p, v) {
+  if (v === null || v === undefined) return input(p, "");
+  if (typeof v === "object") return `<code>${esc(JSON.stringify(v))}</code>`;
+  return input(p, v);
+}
+
+// --- Apply: write edited inputs back into the result JSON by path ---
+// collectEdits is serialized into the review tab too — keep it free of outer-scope refs.
+function collectEdits(root, data) {
+  let changed = 0;
+  root.querySelectorAll("[data-path]").forEach(el => {
+    const segs = el.dataset.path.split(".");
+    let node = data;
+    for (let i = 0; i < segs.length - 1 && node != null; i++)
+      node = node[/^\d+$/.test(segs[i]) ? +segs[i] : segs[i]];
+    const leaf = segs.at(-1), key = /^\d+$/.test(leaf) ? +leaf : leaf;
+    if (node === null || typeof node !== "object") return;
+    const val = coerce(el.value, node[key]);
+    if (JSON.stringify(node[key]) !== JSON.stringify(val)) { node[key] = val; changed++; }
+  });
+  return changed;
+}
+function applyEdits(card, docEl, result) {
+  if (collectEdits(docEl, result.data) > 0) window.__syncReview(card.id, docEl.id);
+}
+function coerce(s, orig) {
+  s = s.trim();
+  if (s === "") return null;
+  if (typeof orig === "number" && !isNaN(+s)) return +s;
+  return s;
+}
+function warnings(ws) {
+  return (ws && ws.length)
+    ? `<div class="warn">⚠ ${ws.map(esc).join("<br>⚠ ")}</div>` : "";
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+init().catch(e => console.error("config load failed", e));
+</script>
+</body>
+</html>

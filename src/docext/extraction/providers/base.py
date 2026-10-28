@@ -53,6 +53,7 @@ class ModelProvider(abc.ABC):
     """One vendor. Returns raw JSON text; the pipeline validates it against the schema."""
 
     name: str = "base"
+    requires_api_key: bool = False
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -60,6 +61,14 @@ class ModelProvider(abc.ABC):
     @property
     @abc.abstractmethod
     def capabilities(self) -> ProviderCapabilities: ...
+
+    @classmethod
+    async def list_models(cls, settings: Settings) -> list[str]:
+        """Model names discoverable without credentials (e.g. a local model server).
+
+        Empty list = no discovery; clients fall back to free-text model input.
+        """
+        return []
 
     @abc.abstractmethod
     async def extract_structured(self, request: ExtractionRequest) -> ProviderResponse: ...

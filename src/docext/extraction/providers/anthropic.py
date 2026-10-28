@@ -26,6 +26,7 @@ _TOOL_NAME = "emit_document"
 
 class AnthropicProvider(ModelProvider):
     name = "anthropic"
+    requires_api_key = True
 
     def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None) -> None:
         super().__init__(settings)

@@ -11,10 +11,11 @@ PDF is supported first; other formats are added as ingestion plugins.
 make install
 cp .env.example .env            # fill in the provider keys you use
 make check                      # lint + typecheck + tests
-make run                        # API on http://localhost:8000/docs
+make run                        # API on http://localhost:8000/docs — web UI on http://localhost:8000/
 
 # CLI
 uv run docext extract samples/invoice.pdf --type invoice --model openai:gpt-4o-mini
+uv run docext extract combined.pdf --model openai:gpt-4o-mini   # omit --type to auto-detect
 uv run docext providers         # list registered model providers
 uv run docext types             # list registered document types
 ```
@@ -29,6 +30,22 @@ file ──► ingestion (PDF → Document) ──► extraction pipeline ──
 ```
 
 See [`docs/architecture.md`](docs/architecture.md) for details and [`docs/adr/`](docs/adr/) for decisions.
+
+## Docker
+
+```bash
+docker build -t docext .
+docker run -p 8000:8000 docext                       # mock model, no keys needed
+docker run -p 8000:8000 --env-file .env docext       # with provider keys from .env
+# UI on http://localhost:8000/ — API docs on /docs
+```
+
+Secrets are passed at runtime (`-e` / `--env-file`), never baked into the image.
+
+## Web UI
+`GET /` serves a single-page UI (no build step): pick provider/model, enter an API key (sent
+per request, never stored), drop multiple PDFs — each is auto-classified per page — and view
+every extracted field with warnings, skipped pages and raw JSON (spec 0005, ADR-0008).
 
 ## Developing with AI agents ("vibe coding")
 
