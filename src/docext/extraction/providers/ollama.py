@@ -19,13 +19,31 @@ from docext.extraction.providers.base import (
     Usage,
 )
 
+# Ollama defaults `num_ctx` to 4096 and silently truncates the prompt beyond it, so the context
+# window is sized per request. ~3 chars/token is a conservative estimate for mixed text + JSON.
+_CHARS_PER_TOKEN = 3
+_NUM_CTX_FLOOR = 4096
+_NUM_CTX_STEP = 1024
+_NUM_CTX_SLACK = 512
+
+
+def estimate_num_ctx(request: ExtractionRequest, settings: Settings) -> int:
+    if settings.ollama_num_ctx is not None:
+        return settings.ollama_num_ctx
+    prompt_chars = len(request.system_prompt) + len(request.user_prompt)
+    needed = prompt_chars // _CHARS_PER_TOKEN + request.max_output_tokens + _NUM_CTX_SLACK
+    rounded = -(-needed // _NUM_CTX_STEP) * _NUM_CTX_STEP
+    return min(max(rounded, _NUM_CTX_FLOOR), settings.ollama_max_num_ctx)
+
 
 class OllamaProvider(ModelProvider):
     name = "ollama"
 
     def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None) -> None:
         super().__init__(settings)
-        self._client = client or make_client(settings, settings.ollama_base_url, {})
+        self._client = client or make_client(
+            settings, settings.ollama_base_url, {}, timeout_s=settings.ollama_timeout_s
+        )
 
     @property
     def capabilities(self) -> ProviderCapabilities:
@@ -42,6 +60,7 @@ class OllamaProvider(ModelProvider):
             "options": {
                 "temperature": request.temperature,
                 "num_predict": request.max_output_tokens,
+                "num_ctx": estimate_num_ctx(request, self.settings),
             },
             "messages": [{"role": "system", "content": request.system_prompt}, user],
         }

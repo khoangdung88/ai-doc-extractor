@@ -91,6 +91,47 @@ async def test_ollama_passes_schema_as_format(settings: Settings) -> None:
     assert response.usage.output_tokens == 2
 
 
+async def test_ollama_sizes_num_ctx_from_prompt(settings: Settings) -> None:
+    """Regression: Ollama defaults num_ctx to 4096 and silently truncated multi-page documents."""
+    seen: list[dict[str, Any]] = []
+    body = {"model": "llama", "message": {"content": "{}"}}
+    provider = OllamaProvider(settings, client=client_returning(200, body, seen))
+    long_request = REQUEST.model_copy(
+        update={"user_prompt": "x" * 60_000, "max_output_tokens": 4096}
+    )
+
+    await provider.extract_structured(REQUEST)
+    await provider.extract_structured(long_request)
+
+    # short prompt: room for the 4096 output tokens + slack, rounded up to 1024
+    assert seen[0]["options"]["num_ctx"] == 5120
+    assert seen[1]["options"]["num_ctx"] >= 60_000 // 3 + 4096
+    assert seen[1]["options"]["num_ctx"] % 1024 == 0
+
+
+async def test_ollama_num_ctx_honours_override_and_cap(settings: Settings) -> None:
+    seen: list[dict[str, Any]] = []
+    body = {"model": "llama", "message": {"content": "{}"}}
+    huge = REQUEST.model_copy(update={"user_prompt": "x" * 1_000_000})
+
+    forced = settings.model_copy(update={"ollama_num_ctx": 2048})
+    await OllamaProvider(forced, client=client_returning(200, body, seen)).extract_structured(huge)
+    capped = settings.model_copy(update={"ollama_max_num_ctx": 8192})
+    await OllamaProvider(capped, client=client_returning(200, body, seen)).extract_structured(huge)
+
+    assert seen[0]["options"]["num_ctx"] == 2048
+    assert seen[1]["options"]["num_ctx"] == 8192
+
+
+async def test_ollama_uses_dedicated_timeout(settings: Settings) -> None:
+    """Regression: cold-loading an 18 GB local model exceeded the shared 60 s provider timeout."""
+    provider = OllamaProvider(settings.model_copy(update={"ollama_timeout_s": 300.0}))
+    try:
+        assert provider._client.timeout.read == 300.0
+    finally:
+        await provider.close()
+
+
 async def test_http_errors_are_mapped(settings: Settings) -> None:
     no_retry = settings.model_copy(update={"provider_max_retries": 0})
 
