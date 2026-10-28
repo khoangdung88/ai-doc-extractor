@@ -5,12 +5,20 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Fixed
+- Deterministic repairs in domain models (ADR 0007): `Invoice` takes `unit_price`/`amount` from the
+  consistent `price_components` column when the model pasted a column total into `unit_price`;
+  `LineItem.hs_code` keeps digits only and drops implausible values; `BookingConfirmation` moves a
+  `NNN-NNNNNNNN` value from `hawb_number`/`booking_number` to `mawb_number` and falls back to the
+  HAWB as `booking_number`.
 - `ollama` provider: dedicated `DOCEXT_OLLAMA_TIMEOUT_S` (default 300 s) so cold model loads no
   longer hit the shared 60 s timeout; `options.num_ctx` is now sized from the prompt (override with
   `DOCEXT_OLLAMA_NUM_CTX`, cap with `DOCEXT_OLLAMA_MAX_NUM_CTX`) instead of Ollama's silent 4096 default;
   prompts that cannot fit the cap fail with `input_too_large` instead of being truncated.
 
 ### Added
+- `invoice` prompt v3: column selection when freight/insurance are printed separately from goods
+  totals. ADR 0007 (schema versioning + deterministic post-processing). Fixture README rows for the
+  processing-invoice and air-booking samples.
 - `invoice` schema v2 / prompt v2: `LineItem.part_number` and `LineItem.price_components` for
   multi-column (processing-trade) prices, `contract_number`, `shipped_per`, `shipment_date`,
   `amount_components`, `total_packages`, `net_weight`, `gross_weight`; warning when

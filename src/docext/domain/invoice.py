@@ -5,13 +5,19 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from docext.domain.base import BaseDocumentSchema, DocumentType
-from docext.domain.common import LineItem, Money, Party, PriceComponent, Weight
+from docext.domain.common import LineItem, Money, Party, PriceComponent, Quantity, Weight
 
 _ABS_TOLERANCE = Decimal("0.01")
 _REL_TOLERANCE = Decimal("0.005")
+
+
+def _consistent(quantity: Quantity, unit_price: Money, amount: Money) -> bool:
+    expected = quantity.value * unit_price.amount
+    tolerance = max(_ABS_TOLERANCE, abs(expected) * _REL_TOLERANCE)
+    return abs(expected - amount.amount) <= tolerance
 
 
 class Invoice(BaseDocumentSchema):
@@ -52,16 +58,46 @@ class Invoice(BaseDocumentSchema):
     gross_weight: Weight | None = None
     notes: str | None = None
 
+    @model_validator(mode="after")
+    def _reconcile_prices_from_components(self) -> Invoice:
+        """Deterministic repair: when a line's `unit_price` does not explain `amount` but one of its
+        printed price columns does, take that column. Models often paste a column total into
+        `unit_price` on multi-column (processing-trade) invoices."""
+        for item in self.line_items:
+            if item.quantity is None or not item.price_components:
+                continue
+            if (
+                item.unit_price
+                and item.amount
+                and _consistent(item.quantity, item.unit_price, item.amount)
+            ):
+                continue
+            candidates = [
+                c
+                for c in item.price_components
+                if c.unit_price and c.amount and _consistent(item.quantity, c.unit_price, c.amount)
+            ]
+            if not candidates:
+                continue
+            chosen = next(
+                (c for c in candidates if item.amount and c.amount == item.amount),
+                next(
+                    (c for c in candidates if self.total_amount and c.amount == self.total_amount),
+                    candidates[-1],
+                ),
+            )
+            item.unit_price, item.amount = chosen.unit_price, chosen.amount
+        return self
+
     def warnings(self) -> list[str]:
         warnings: list[str] = []
         for item in self.line_items:
             if item.quantity is None or item.unit_price is None or item.amount is None:
                 continue
-            expected = item.quantity.value * item.unit_price.amount
-            tolerance = max(_ABS_TOLERANCE, abs(expected) * _REL_TOLERANCE)
-            if abs(expected - item.amount.amount) > tolerance:
+            if not _consistent(item.quantity, item.unit_price, item.amount):
                 warnings.append(
-                    f"line {item.line_no}: quantity x unit_price = {expected} differs from "
+                    f"line {item.line_no}: quantity x unit_price = "
+                    f"{item.quantity.value * item.unit_price.amount} differs from "
                     f"amount {item.amount.amount}"
                 )
         amounts = [li.amount.amount for li in self.line_items if li.amount is not None]
@@ -81,7 +117,7 @@ INVOICE_TYPE = DocumentType(
     name="invoice",
     title="Commercial Invoice",
     schema=Invoice,
-    prompt_version="v2",
+    prompt_version="v3",
     description=(
         "Seller-to-buyer invoice for exported goods: parties, line items (incl. multi-column "
         "prices), totals, terms, shipment details."
