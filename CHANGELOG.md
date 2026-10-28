@@ -5,6 +5,9 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Fixed
+- Reconciliation guards: invoice lines are only repaired when a price column matches the line or
+  invoice total (no last-column guess); sea booking numbers are never reinterpreted as MAWBs; a
+  booking number that duplicates the MAWB falls back to the HAWB.
 - Deterministic repairs in domain models (ADR 0007): `Invoice` takes `unit_price`/`amount` from the
   consistent `price_components` column when the model pasted a column total into `unit_price`;
   `LineItem.hs_code` keeps digits only and drops implausible values; `BookingConfirmation` moves a
