@@ -117,8 +117,8 @@ async def test_ollama_sizes_num_ctx_from_prompt(settings: Settings) -> None:
     await provider.extract_structured(REQUEST)
     await provider.extract_structured(long_request)
 
-    # short prompt: room for the 4096 output tokens + slack, rounded up to 1024
-    assert seen[0]["options"]["num_ctx"] == 5120
+    # short prompt: room for the 8192 output tokens + slack, rounded up to 1024
+    assert seen[0]["options"]["num_ctx"] == 9216
     assert seen[1]["options"]["num_ctx"] >= 60_000 // 3 + 4096
     assert seen[1]["options"]["num_ctx"] % 1024 == 0
 

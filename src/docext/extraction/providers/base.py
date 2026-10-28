@@ -29,7 +29,7 @@ class ExtractionRequest(BaseModel):
     source_name: str | None = None
     images_png: list[bytes] = Field(default_factory=list, repr=False)
     temperature: float = 0.0
-    max_output_tokens: int = 4096
+    max_output_tokens: int = 8192
 
 
 class Usage(BaseModel):

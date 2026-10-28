@@ -5,6 +5,8 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 ## [Unreleased]
 
 ### Fixed
+- `ExtractionRequest.max_output_tokens` default 4096 → 8192: large schemas (invoice v3) were
+  truncated mid-JSON and surfaced as `extraction_validation_failed`.
 - `ollama` provider: send `"think": false` — thinking models (qwen3-*, deepseek) emitted
   reasoning before JSON and broke `extraction_validation_failed` on otherwise valid output.
 - Deterministic repairs in domain models (ADR 0007): `Invoice` takes `unit_price`/`amount` from the
