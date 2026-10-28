@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class _Value(BaseModel):
@@ -63,6 +63,15 @@ class LineItem(_Value):
         default_factory=list,
         description="Every priced column when the invoice prints more than one; empty otherwise",
     )
+
+    @field_validator("hs_code", mode="before")
+    @classmethod
+    def _digits_only_hs_code(cls, value: object) -> str | None:
+        """Keep digits only; drop values that cannot be an HS code (e.g. a pasted quantity)."""
+        if value is None:
+            return None
+        digits = "".join(ch for ch in str(value) if ch.isdigit())
+        return digits if 6 <= len(digits) <= 10 else None
 
 
 class DateRange(_Value):

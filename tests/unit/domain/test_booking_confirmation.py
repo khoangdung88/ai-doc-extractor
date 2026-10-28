@@ -71,3 +71,30 @@ def test_sea_booking_warns_on_air_fields() -> None:
 def test_transport_mode_is_restricted() -> None:
     with pytest.raises(ValidationError):
         BookingConfirmation.model_validate({"transport_mode": "space"})
+
+
+def test_booking_moves_mawb_shaped_hawb_and_uses_hawb_as_booking_number() -> None:
+    """Real-world case: model put the MAWB into hawb_number and left booking_number empty."""
+    booking = BookingConfirmation.model_validate(
+        {"transport_mode": "air", "hawb_number": "738-08558561"}
+    )
+    assert booking.mawb_number == "738-08558561"
+    assert booking.hawb_number is None
+    assert booking.booking_number is None
+
+    booking = BookingConfirmation.model_validate(
+        {"transport_mode": "air", "booking_number": "738-08558561", "hawb_number": "620212646355"}
+    )
+    assert booking.mawb_number == "738-08558561"
+    assert booking.booking_number == "620212646355"
+    assert booking.warnings() == []
+
+
+def test_booking_keeps_explicit_identifiers() -> None:
+    booking = BookingConfirmation.model_validate(
+        {"booking_number": "BKG1", "mawb_number": "738-00000000", "hawb_number": "738-11111111"}
+    )
+
+    assert booking.booking_number == "BKG1"
+    assert booking.mawb_number == "738-00000000"
+    assert booking.hawb_number == "738-11111111"
