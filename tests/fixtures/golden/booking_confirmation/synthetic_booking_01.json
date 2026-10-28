@@ -1,0 +1,20 @@
+{
+  "booking_number": "BKG123456789",
+  "booking_date": "2026-02-20",
+  "transport_mode": "sea",
+  "carrier": {"name": "EXAMPLE LINE"},
+  "shipper": {"name": "ACME EXPORT CO., LTD"},
+  "vessel": "EXAMPLE VESSEL",
+  "voyage": "012W",
+  "port_of_loading": "HO CHI MINH (VNSGN)",
+  "port_of_discharge": "HAMBURG (DEHAM)",
+  "etd": "2026-03-05",
+  "eta": "2026-04-10",
+  "si_cutoff": "2026-03-02T12:00:00",
+  "vgm_cutoff": "2026-03-03T12:00:00",
+  "cy_cutoff": "2026-03-03T18:00:00",
+  "containers": [
+    {"container_type": "40HC", "quantity": 2, "pickup_depot": "CAT LAI DEPOT", "return_terminal": "CAT LAI TERMINAL"}
+  ],
+  "commodity": "WOODEN FURNITURE"
+}

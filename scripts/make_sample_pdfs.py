@@ -46,6 +46,20 @@ SAMPLES: dict[str, list[str]] = {
         "CY Cut-off: 2026-03-03 18:00",
         "Pickup depot: CAT LAI DEPOT   Return: CAT LAI TERMINAL",
     ],
+    "booking_confirmation/synthetic_air_booking_01.pdf": [
+        "BOOKING CONFIRMATION - AIR EXPORT",
+        "Issued by: EXAMPLE FORWARDING (VIETNAM) CO., LTD        Date: 2026-02-20",
+        "Shipper: ACME EXPORT CO., LTD",
+        "Consignee: SAMPLE IMPORTS (THAILAND) CO., LTD",
+        "Shipper Ref: INV-2026-0001",
+        "MAWB No: 123-45678901        HAWB No: 987654321012",
+        "Flight details: XY123   2026-03-05   SGN-BKK   09:30 - 11:10",
+        "Airport of destination: BKK",
+        "Quantity: 4 CTNS / 25.5 KGS / 0.25 CBM    Chargeable weight: 42.0 KG",
+        "Cargo cut-off time: 22:00 2026-03-04",
+        "Terminal: EXAMPLE CARGO TERMINAL   Warehouse: 01A",
+        "Remark: Please present this booking confirmation at the terminal.",
+    ],
 }
 
 

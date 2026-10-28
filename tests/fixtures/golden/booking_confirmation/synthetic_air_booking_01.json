@@ -1,0 +1,23 @@
+{
+  "booking_number": "987654321012",
+  "booking_reference": "INV-2026-0001",
+  "booking_date": "2026-02-20",
+  "transport_mode": "air",
+  "forwarder": {"name": "EXAMPLE FORWARDING (VIETNAM) CO., LTD"},
+  "shipper": {"name": "ACME EXPORT CO., LTD"},
+  "consignee": {"name": "SAMPLE IMPORTS (THAILAND) CO., LTD"},
+  "mawb_number": "123-45678901",
+  "hawb_number": "987654321012",
+  "flight_number": "XY123",
+  "port_of_loading": "SGN",
+  "port_of_discharge": "BKK",
+  "etd": "2026-03-05",
+  "eta": "2026-03-05",
+  "cargo_cutoff": "2026-03-04T22:00:00",
+  "terminal": "EXAMPLE CARGO TERMINAL / 01A",
+  "pieces": 4,
+  "gross_weight": {"value": "25.5", "unit": "KG"},
+  "chargeable_weight": {"value": "42.0", "unit": "KG"},
+  "volume": {"value": "0.25", "unit": "CBM"},
+  "remarks": "Please present this booking confirmation at the terminal."
+}
