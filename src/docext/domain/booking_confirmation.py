@@ -92,7 +92,9 @@ class BookingConfirmation(BaseDocumentSchema):
             warnings.append("mawb_number is not in NNN-NNNNNNNN format")
         if self.transport_mode == "air" and self.containers:
             warnings.append("containers listed on an air booking")
-        if self.transport_mode == "sea" and (self.mawb_number or self.flight_number):
+        if self.transport_mode == "sea" and (
+            self.mawb_number or self.hawb_number or self.flight_number
+        ):
             warnings.append("air waybill / flight on a sea booking")
         return warnings
 

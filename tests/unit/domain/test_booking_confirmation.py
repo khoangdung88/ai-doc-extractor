@@ -60,11 +60,12 @@ def test_air_booking_warns_on_bad_mawb_and_containers() -> None:
 
 
 def test_sea_booking_warns_on_air_fields() -> None:
-    booking = BookingConfirmation.model_validate(
-        {"booking_number": "BK1", "transport_mode": "sea", "flight_number": "VN611"}
-    )
+    for air_field in ("flight_number", "mawb_number", "hawb_number"):
+        booking = BookingConfirmation.model_validate(
+            {"booking_number": "BK1", "transport_mode": "sea", air_field: "X1"}
+        )
 
-    assert "air waybill / flight on a sea booking" in booking.warnings()
+        assert "air waybill / flight on a sea booking" in booking.warnings(), air_field
 
 
 def test_transport_mode_is_restricted() -> None:
