@@ -1,0 +1,17 @@
+{
+  "invoice_number": "INV-2026-0001",
+  "invoice_date": "2026-03-02",
+  "seller": {"name": "ACME EXPORT CO., LTD", "address": "1 Example Road, Ho Chi Minh City, Vietnam", "country": "VN"},
+  "buyer": {"name": "SAMPLE IMPORTS GMBH", "address": "2 Beispielstrasse, 20095 Hamburg, Germany", "country": "DE"},
+  "currency": "USD",
+  "incoterm": "FOB",
+  "incoterm_place": "HO CHI MINH",
+  "payment_terms": "T/T 30 days",
+  "port_of_loading": "HO CHI MINH (VNSGN)",
+  "port_of_discharge": "HAMBURG (DEHAM)",
+  "line_items": [
+    {"line_no": 1, "description": "Wooden chairs", "hs_code": "940161", "quantity": {"value": "100", "unit": "PCS"}, "unit_price": {"amount": "25.00", "currency": "USD"}, "amount": {"amount": "2500.00", "currency": "USD"}},
+    {"line_no": 2, "description": "Wooden tables", "hs_code": "940360", "quantity": {"value": "20", "unit": "PCS"}, "unit_price": {"amount": "150.00", "currency": "USD"}, "amount": {"amount": "3000.00", "currency": "USD"}}
+  ],
+  "total_amount": {"amount": "5500.00", "currency": "USD"}
+}

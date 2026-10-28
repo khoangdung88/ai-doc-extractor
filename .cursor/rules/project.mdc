@@ -1,0 +1,6 @@
+---
+description: Project-wide rules (delegates to AGENTS.md)
+alwaysApply: true
+---
+Read and follow `AGENTS.md` at the repo root, then the topic rules in `.agent/rules/` and the workflow
+in `.agent/workflows/` that matches the task. Those files are the source of truth; do not deviate.

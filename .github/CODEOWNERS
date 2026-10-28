@@ -1,0 +1,8 @@
+# Human review required on everything; stricter owners for contracts and rules.
+*                               @khoangdung88
+/src/docext/domain/             @khoangdung88
+/src/docext/core/               @khoangdung88
+/.agent/                        @khoangdung88
+/AGENTS.md                      @khoangdung88
+/docs/adr/                      @khoangdung88
+/.github/                       @khoangdung88

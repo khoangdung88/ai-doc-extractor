@@ -1,0 +1,16 @@
+name: New document type
+description: Request support for a new document (e.g. Bill of Lading)
+labels: [feature, domain]
+body:
+  - type: input
+    id: name
+    attributes: { label: Document name }
+    validations: { required: true }
+  - type: textarea
+    id: fields
+    attributes: { label: Fields to extract, description: "Table: field | type | required | example | notes" }
+    validations: { required: true }
+  - type: textarea
+    id: samples
+    attributes: { label: Sample documents, description: At least 3 anonymised samples (attach or describe how to obtain). }
+    validations: { required: true }

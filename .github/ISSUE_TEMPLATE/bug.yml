@@ -1,0 +1,19 @@
+name: Bug report
+description: Something behaves incorrectly
+labels: [bug]
+body:
+  - type: textarea
+    id: steps
+    attributes: { label: Steps to reproduce, description: Command / request, document type, model used. Attach an ANONYMISED sample if possible. }
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes: { label: Expected }
+    validations: { required: true }
+  - type: textarea
+    id: actual
+    attributes: { label: Actual (include error output / extracted JSON) }
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes: { label: Version / commit }
