@@ -208,3 +208,29 @@ def test_hs_code_keeps_digits_and_rejects_implausible_values() -> None:
     ).line_items
 
     assert [i.hs_code for i in items] == ["940161", None, "85011000", None]
+
+
+def test_invoice_reconciliation_does_not_guess_when_no_component_matches_a_total() -> None:
+    invoice = Invoice.model_validate(
+        {
+            "invoice_number": "INV-1",
+            "line_items": [
+                {
+                    "line_no": 1,
+                    "quantity": {"value": "10"},
+                    "unit_price": {"amount": "999"},
+                    "amount": {"amount": "50"},
+                    "price_components": [
+                        {"label": "a", "unit_price": {"amount": "1"}, "amount": {"amount": "10"}},
+                        {"label": "b", "unit_price": {"amount": "4"}, "amount": {"amount": "40"}},
+                    ],
+                }
+            ],
+            "total_amount": {"amount": "70"},
+        }
+    )
+
+    line = invoice.line_items[0]
+    assert line.unit_price is not None and line.unit_price.amount == Decimal("999")
+    assert line.amount is not None and line.amount.amount == Decimal("50")
+    assert any(w.startswith("line 1: quantity x unit_price") for w in invoice.warnings())

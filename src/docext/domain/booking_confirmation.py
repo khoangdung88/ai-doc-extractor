@@ -84,12 +84,17 @@ class BookingConfirmation(BaseDocumentSchema):
 
     @model_validator(mode="after")
     def _normalise_air_identifiers(self) -> BookingConfirmation:
-        """Deterministic repair: a `NNN-NNNNNNNN` value is a MAWB wherever the model put it, and an
-        air booking without a printed booking number is identified by its HAWB."""
+        """Deterministic repair for air bookings: a `NNN-NNNNNNNN` value in `hawb_number` or (on an
+        air booking) `booking_number` is the MAWB; a booking number that merely repeats the MAWB is
+        dropped; an air booking without a booking number is identified by its HAWB. Sea booking
+        numbers are never touched."""
         if self.hawb_number and _MAWB_RE.match(self.hawb_number) and not self.mawb_number:
             self.mawb_number, self.hawb_number = self.hawb_number, None
-        if self.booking_number and _MAWB_RE.match(self.booking_number) and not self.mawb_number:
-            self.mawb_number, self.booking_number = self.booking_number, None
+        if self.transport_mode == "air" and self.booking_number:
+            if not self.mawb_number and _MAWB_RE.match(self.booking_number):
+                self.mawb_number, self.booking_number = self.booking_number, None
+            elif self.booking_number == self.mawb_number:
+                self.booking_number = None
         if not self.booking_number and self.hawb_number:
             self.booking_number = self.hawb_number
         return self

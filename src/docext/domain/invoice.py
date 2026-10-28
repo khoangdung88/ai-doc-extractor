@@ -61,8 +61,8 @@ class Invoice(BaseDocumentSchema):
     @model_validator(mode="after")
     def _reconcile_prices_from_components(self) -> Invoice:
         """Deterministic repair: when a line's `unit_price` does not explain `amount` but one of its
-        printed price columns does, take that column. Models often paste a column total into
-        `unit_price` on multi-column (processing-trade) invoices."""
+        printed price columns does *and* that column matches the line or invoice total, take that
+        column. Models often paste a column total into `unit_price` on multi-column invoices."""
         for item in self.line_items:
             if item.quantity is None or not item.price_components:
                 continue
@@ -83,9 +83,11 @@ class Invoice(BaseDocumentSchema):
                 (c for c in candidates if item.amount and c.amount == item.amount),
                 next(
                     (c for c in candidates if self.total_amount and c.amount == self.total_amount),
-                    candidates[-1],
+                    None,
                 ),
             )
+            if chosen is None:
+                continue  # nothing printed explains the line; leave it and let warnings() flag it
             item.unit_price, item.amount = chosen.unit_price, chosen.amount
         return self
 

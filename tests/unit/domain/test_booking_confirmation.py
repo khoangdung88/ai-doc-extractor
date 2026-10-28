@@ -98,3 +98,27 @@ def test_booking_keeps_explicit_identifiers() -> None:
     assert booking.booking_number == "BKG1"
     assert booking.mawb_number == "738-00000000"
     assert booking.hawb_number == "738-11111111"
+
+
+def test_sea_booking_number_shaped_like_mawb_is_kept() -> None:
+    booking = BookingConfirmation.model_validate(
+        {"transport_mode": "sea", "booking_number": "123-45678901"}
+    )
+
+    assert booking.booking_number == "123-45678901"
+    assert booking.mawb_number is None
+    assert booking.warnings() == []
+
+
+def test_booking_number_duplicating_mawb_falls_back_to_hawb() -> None:
+    booking = BookingConfirmation.model_validate(
+        {
+            "transport_mode": "air",
+            "booking_number": "738-08558561",
+            "mawb_number": "738-08558561",
+            "hawb_number": "620212646355",
+        }
+    )
+
+    assert booking.mawb_number == "738-08558561"
+    assert booking.booking_number == "620212646355"
