@@ -18,10 +18,15 @@ from docext.core.errors import (
 _RETRY_STATUSES = {429, 500, 502, 503, 504}
 
 
-def make_client(settings: Settings, base_url: str, headers: dict[str, str]) -> httpx.AsyncClient:
-    return httpx.AsyncClient(
-        base_url=base_url, headers=headers, timeout=httpx.Timeout(settings.provider_timeout_s)
-    )
+def make_client(
+    settings: Settings,
+    base_url: str,
+    headers: dict[str, str],
+    *,
+    timeout_s: float | None = None,
+) -> httpx.AsyncClient:
+    timeout = settings.provider_timeout_s if timeout_s is None else timeout_s
+    return httpx.AsyncClient(base_url=base_url, headers=headers, timeout=httpx.Timeout(timeout))
 
 
 async def post_json(

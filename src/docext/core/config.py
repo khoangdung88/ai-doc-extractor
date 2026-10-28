@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     ollama_base_url: str = Field(
         default="http://localhost:11434", validation_alias="OLLAMA_BASE_URL"
     )
+    # Local models load lazily (tens of seconds for >10 GB weights), so Ollama gets its own,
+    # longer timeout. `ollama_num_ctx` forces a context window; when None it is estimated per
+    # request from the prompt size and capped by `ollama_max_num_ctx`.
+    ollama_timeout_s: float = 300.0
+    ollama_num_ctx: int | None = None
+    ollama_max_num_ctx: int = 32_768
 
     @property
     def max_upload_bytes(self) -> int:
