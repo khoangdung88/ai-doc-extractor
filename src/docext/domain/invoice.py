@@ -14,6 +14,11 @@ _ABS_TOLERANCE = Decimal("0.01")
 _REL_TOLERANCE = Decimal("0.005")
 
 
+def _same_amount(a: Money | None, b: Money | None) -> bool:
+    """Compare printed amounts by value; a column may omit the currency the total carries."""
+    return a is not None and b is not None and a.amount == b.amount
+
+
 def _consistent(quantity: Quantity, unit_price: Money, amount: Money) -> bool:
     expected = quantity.value * unit_price.amount
     tolerance = max(_ABS_TOLERANCE, abs(expected) * _REL_TOLERANCE)
@@ -80,11 +85,8 @@ class Invoice(BaseDocumentSchema):
             if not candidates:
                 continue
             chosen = next(
-                (c for c in candidates if item.amount and c.amount == item.amount),
-                next(
-                    (c for c in candidates if self.total_amount and c.amount == self.total_amount),
-                    None,
-                ),
+                (c for c in candidates if _same_amount(c.amount, item.amount)),
+                next((c for c in candidates if _same_amount(c.amount, self.total_amount)), None),
             )
             if chosen is None:
                 continue  # nothing printed explains the line; leave it and let warnings() flag it
