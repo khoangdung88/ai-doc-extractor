@@ -1,4 +1,4 @@
-"""GET / — the single-file web UI (spec 0005, ADR-0008)."""
+"""GET / — the single-file web UI (spec 0005, ADR-0009)."""
 
 from __future__ import annotations
 

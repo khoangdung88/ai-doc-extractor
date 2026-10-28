@@ -1,4 +1,4 @@
-"""Page-level document-type detection for combined PDFs (see spec 0004 / ADR-0007).
+"""Page-level document-type detection for combined PDFs (see spec 0004 / ADR-0008).
 
 One provider call labels every page with a registry type name or `unknown`. Model output is
 untrusted: unregistered labels and missing/out-of-range pages are coerced to `unknown` so a

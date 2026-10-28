@@ -52,7 +52,7 @@ class SkippedPages(BaseModel):
 
 
 class AutoExtractionResult(BaseModel):
-    """Response for extraction without an explicit type (spec 0004 / ADR-0007)."""
+    """Response for extraction without an explicit type (spec 0004 / ADR-0008)."""
 
     model_config = ConfigDict(frozen=True)
 

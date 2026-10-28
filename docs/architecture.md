@@ -46,7 +46,7 @@ violations with grep guards (`.github/workflows/ci.yml` → *architecture guard*
    `warnings()` (e.g. totals mismatch).
 5. **`ExtractionResult`** (data + model + prompt_version + usage + latency + warnings) is returned.
 
-### Auto mode (`type` omitted — ADR-0007)
+### Auto mode (`type` omitted — ADR-0008)
 
 `extract_auto` first calls `classification.classify_pages`: one provider request labels every
 page with a registry type or `unknown`. Pages of the same type are merged into one

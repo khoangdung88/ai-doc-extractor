@@ -9,3 +9,6 @@ or personal data. Keep each file < 500 KB. Private/real samples for local evalua
 | `invoice/synthetic_invoice_01.pdf` | 1-page commercial invoice, 2 line items, FOB, USD |
 | `packing_list/synthetic_packing_list_01.pdf` | 1-page packing list, 2 package ranges, N.W./G.W. |
 | `booking_confirmation/synthetic_booking_01.pdf` | 1-page sea booking, 2x40HC, cut-offs |
+
+| `invoice/synthetic_processing_invoice_01.pdf` | 1-page processing-trade invoice, 1 line with two price columns (processing fee / material), part no., air freight, cartons & weights |
+| `booking_confirmation/synthetic_air_booking_01.pdf` | 1-page air booking by a forwarder: MAWB/HAWB, flight line, cargo cut-off, terminal, pieces/weight/volume |

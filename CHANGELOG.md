@@ -7,6 +7,11 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 ### Fixed
 - `ollama` provider: send `"think": false` — thinking models (qwen3-*, deepseek) emitted
   reasoning before JSON and broke `extraction_validation_failed` on otherwise valid output.
+- Deterministic repairs in domain models (ADR 0007): `Invoice` takes `unit_price`/`amount` from the
+  consistent `price_components` column when the model pasted a column total into `unit_price`;
+  `LineItem.hs_code` keeps digits only and drops implausible values; `BookingConfirmation` moves a
+  `NNN-NNNNNNNN` value from `hawb_number`/`booking_number` to `mawb_number` and falls back to the
+  HAWB as `booking_number`.
 - `ollama` provider: dedicated `DOCEXT_OLLAMA_TIMEOUT_S` (default 300 s) so cold model loads no
   longer hit the shared 60 s timeout; `options.num_ctx` is now sized from the prompt (override with
   `DOCEXT_OLLAMA_NUM_CTX`, cap with `DOCEXT_OLLAMA_MAX_NUM_CTX`) instead of Ollama's silent 4096 default;
@@ -24,12 +29,15 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - Web UI at `GET /`: single-file page (no frontend toolchain) to pick provider/model, supply
   an API key per request (`api_key` form field — never stored or logged), upload multiple
   PDFs that are auto-classified, and view extracted fields, warnings, skipped pages and raw
-  JSON; new `GET /v1/config` discovery endpoint (spec 0005, ADR-0008).
+  JSON; new `GET /v1/config` discovery endpoint (spec 0005, ADR-0009).
 - Auto document-type detection: omitting `--type` (CLI) or `type` (`POST /v1/extract`) runs one
   AI classification call that labels every page with a registered type or `unknown`, merges
   pages of the same type into one extraction, and returns `AutoExtractionResult`
   (`results` + `skipped_pages`) — combined PDFs like invoice + packing list now work
-  end-to-end (spec 0004, ADR-0007).
+  end-to-end (spec 0004, ADR-0008).
+- `invoice` prompt v3: column selection when freight/insurance are printed separately from goods
+  totals. ADR 0007 (schema versioning + deterministic post-processing). Fixture README rows for the
+  processing-invoice and air-booking samples.
 - `invoice` schema v2 / prompt v2: `LineItem.part_number` and `LineItem.price_components` for
   multi-column (processing-trade) prices, `contract_number`, `shipped_per`, `shipment_date`,
   `amount_components`, `total_packages`, `net_weight`, `gross_weight`; warning when

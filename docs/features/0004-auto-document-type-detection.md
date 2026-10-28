@@ -2,7 +2,7 @@
 
 - **Status:** in-progress
 - **Owner:** @khoangdung88   **Agent:** Devin
-- **Created:** 2026-10-28   **Related ADRs:** 0007   **Issue/PR:** —
+- **Created:** 2026-10-28   **Related ADRs:** 0008   **Issue/PR:** —
 
 ## Problem
 Real shipments often arrive as **one PDF containing several document types** (e.g. invoice on
@@ -57,7 +57,7 @@ API — `POST /v1/extract` with `type` omitted returns the same body instead of 
     `ExtractionResult | AutoExtractionResult`.
   - `cli.py`: `--type` optional; auto path prints the `AutoExtractionResult` JSON.
 - Data contract changes: `ExtractionResult` unchanged; `Document` unchanged. NEW response type
-  `AutoExtractionResult` and a response-variant change on `POST /v1/extract` → **ADR-0007**.
+  `AutoExtractionResult` and a response-variant change on `POST /v1/extract` → **ADR-0008**.
 - New dependencies: none. Config / env vars: none.
 - Failure modes and errors:
   - PDF has no text layer → `ClassificationError` ("cannot auto-detect without a text layer;
@@ -84,7 +84,7 @@ same-type pages, provider reuse). API/CLI: extend existing route/CLI tests for t
 
 ## Implementation plan
 Ordered steps, each a commit:
-1. ADR-0007 + this spec (approval gate).
+1. ADR-0008 + this spec (approval gate).
 2. `ClassificationError`, `SkippedPages`/`AutoExtractionResult`, classify prompt v1,
    `classification.py` + unit tests.
 3. `pipeline.extract_auto` + tests.

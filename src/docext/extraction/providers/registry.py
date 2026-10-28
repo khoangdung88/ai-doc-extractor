@@ -18,7 +18,7 @@ PROVIDERS: dict[str, type[ModelProvider]] = {
 }
 
 # Provider name -> Settings field holding its API credential. Used to apply a per-request
-# `api_key` override (web UI, ADR-0008). Providers absent here take no key.
+# `api_key` override (web UI, ADR-0009). Providers absent here take no key.
 CREDENTIAL_SETTINGS: dict[str, str] = {
     "openai": "openai_api_key",
     "anthropic": "anthropic_api_key",

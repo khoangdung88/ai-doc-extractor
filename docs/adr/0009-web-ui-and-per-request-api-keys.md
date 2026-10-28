@@ -1,4 +1,4 @@
-# ADR-0008: Self-hosted single-file web UI and per-request API keys
+# ADR-0009: Self-hosted single-file web UI and per-request API keys
 
 - **Status:** accepted
 - **Date:** 2026-10-28
@@ -32,7 +32,7 @@ request only via `Settings.model_copy` (provider → `Settings` field mapping li
 
 ## Consequences
 - Positive: no new dependencies or build tooling; secrets never touch disk/logs; auto-detect
-  (ADR-0007) makes multi-file upload trivial; additive changes keep existing clients intact.
+  (ADR-0008) makes multi-file upload trivial; additive changes keep existing clients intact.
 - Negative / risks: keys transit per request (acceptable over HTTPS; documented); vanilla JS
   limits future UX richness — acceptable until roadmap #7 iterations demand more.
 - Follow-ups (issues): HTTPS note for deployments; later iterations may add correction UI and

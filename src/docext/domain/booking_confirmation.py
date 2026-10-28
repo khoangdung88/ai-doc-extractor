@@ -6,7 +6,7 @@ import re
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from docext.domain.base import BaseDocumentSchema, DocumentType
 from docext.domain.common import Party, Volume, Weight
@@ -81,6 +81,18 @@ class BookingConfirmation(BaseDocumentSchema):
     volume: Volume | None = None
     service_contract: str | None = None
     remarks: str | None = None
+
+    @model_validator(mode="after")
+    def _normalise_air_identifiers(self) -> BookingConfirmation:
+        """Deterministic repair: a `NNN-NNNNNNNN` value is a MAWB wherever the model put it, and an
+        air booking without a printed booking number is identified by its HAWB."""
+        if self.hawb_number and _MAWB_RE.match(self.hawb_number) and not self.mawb_number:
+            self.mawb_number, self.hawb_number = self.hawb_number, None
+        if self.booking_number and _MAWB_RE.match(self.booking_number) and not self.mawb_number:
+            self.mawb_number, self.booking_number = self.booking_number, None
+        if not self.booking_number and self.hawb_number:
+            self.booking_number = self.hawb_number
+        return self
 
     def warnings(self) -> list[str]:
         warnings: list[str] = []

@@ -1,4 +1,4 @@
-# ADR-0007: AI page classification and optional `type` on extract
+# ADR-0008: AI page classification and optional `type` on extract
 
 - **Status:** accepted
 - **Date:** 2026-10-28

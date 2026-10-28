@@ -2,7 +2,7 @@
 
 - **Status:** in-progress
 - **Owner:** @khoangdung88   **Agent:** Devin
-- **Created:** 2026-10-28   **Related ADRs:** 0008   **Issue/PR:** —
+- **Created:** 2026-10-28   **Related ADRs:** 0009   **Issue/PR:** —
 
 ## Problem
 `docext` is only reachable via CLI and raw HTTP. Operators who process shipments need a GUI to
@@ -58,7 +58,7 @@ in advance. Roadmap #7.
   - `api/ui/index.html` (new, single file) + `api/routes/ui.py`: `GET /` serves the page
     (read from package data, works from the installed wheel).
 - Data contract changes: additive only — `POST /v1/extract` gains an optional form field,
-  new `GET /v1/config`, `GET /`, provider class attribute → **ADR-0008**.
+  new `GET /v1/config`, `GET /`, provider class attribute → **ADR-0009**.
 - New dependencies: none. Config / env vars: none.
 - Failure modes and errors:
   - Missing/invalid key → provider auth error → per-file error card (existing error envelope).
@@ -83,7 +83,7 @@ toolchain" decision).
 
 ## Implementation plan
 Ordered steps, each a commit:
-1. ADR-0008 + this spec (approval gate).
+1. ADR-0009 + this spec (approval gate).
 2. `ProviderCapabilities.requires_api_key` + `GET /v1/config` + `api_key` form override +
    tests.
 3. `api/ui/index.html` + `GET /` route + tests.

@@ -10,3 +10,6 @@ Create from `.agent/templates/adr.md`. Numbered, never deleted; superseded ADRs 
 | 0004 | [Model providers via REST (httpx), addressed as `provider:model`](0004-model-provider-abstraction.md) | accepted |
 | 0005 | [PDF-first ingestion with PyMuPDF; `Document` contract](0005-pdf-first-ingestion.md) | accepted |
 | 0006 | [Agent-first development process (`AGENTS.md`, `.agent/`, spec-before-code)](0006-agent-first-process.md) | accepted |
+| 0007 | [Document schema versioning and deterministic post-processing](0007-schema-versioning-and-deterministic-post-processing.md) | accepted |
+| 0008 | [AI page classification and optional `type` on extract](0008-auto-document-type-detection.md) | accepted |
+| 0009 | [Self-hosted single-file web UI and per-request API keys](0009-web-ui-and-per-request-api-keys.md) | accepted |
