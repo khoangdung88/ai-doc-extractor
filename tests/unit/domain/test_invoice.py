@@ -39,3 +39,66 @@ def test_invoice_no_warning_when_consistent() -> None:
     )
 
     assert invoice.warnings() == []
+
+
+def test_invoice_warns_when_unit_price_is_actually_a_line_total() -> None:
+    """Regression: a model copied a column total (1478.016) into unit_price."""
+    invoice = Invoice.model_validate(
+        {
+            "invoice_number": "INV-1",
+            "line_items": [
+                {
+                    "line_no": 1,
+                    "quantity": {"value": "960", "unit": "PCS"},
+                    "unit_price": {"amount": "1478.016", "currency": "USD"},
+                    "amount": {"amount": "5443.008", "currency": "USD"},
+                }
+            ],
+            "total_amount": {"amount": "5443.008", "currency": "USD"},
+        }
+    )
+
+    assert any(w.startswith("line 1: quantity x unit_price") for w in invoice.warnings())
+
+
+def test_invoice_tolerates_rounded_line_amounts() -> None:
+    invoice = Invoice.model_validate(
+        {
+            "invoice_number": "INV-1",
+            "line_items": [
+                {
+                    "quantity": {"value": "3"},
+                    "unit_price": {"amount": "3.333", "currency": "USD"},
+                    "amount": {"amount": "10.00", "currency": "USD"},
+                }
+            ],
+        }
+    )
+
+    assert invoice.warnings() == []
+
+
+def test_invoice_parses_price_components_and_shipment_fields() -> None:
+    invoice = Invoice.model_validate(
+        {
+            "invoice_number": "INV-1",
+            "shipped_per": "AIR FREIGHT",
+            "total_packages": "4",
+            "line_items": [
+                {
+                    "part_number": "8X-000A001",
+                    "price_components": [
+                        {"label": "processing fee", "unit_price": {"amount": "1.5"}},
+                        {"label": "material", "unit_price": {"amount": "5.5"}},
+                    ],
+                }
+            ],
+        }
+    )
+
+    assert invoice.total_packages == 4
+    assert [c.label for c in invoice.line_items[0].price_components] == [
+        "processing fee",
+        "material",
+    ]
+    assert invoice.line_items[0].part_number == "8X-000A001"

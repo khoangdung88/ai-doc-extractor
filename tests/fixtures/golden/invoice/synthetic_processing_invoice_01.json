@@ -1,0 +1,37 @@
+{
+  "invoice_number": "SAMPLE-PI-0001",
+  "invoice_date": "2026-03-02",
+  "contract_number": "PC-2017-01",
+  "seller": {"name": "EXAMPLE PRECISION VIETNAM CO., LTD", "address": "Lot 1, Example Ind. Park, Hanoi, Vietnam", "country": "VN"},
+  "buyer": {"name": "EXAMPLE PRECISION INC.", "address": "1-2-3 Example-cho, Nagano, Japan", "country": "JP"},
+  "consignee": {"name": "SAMPLE ELECTRONICS (THAILAND) CO., LTD", "address": "99 Example Estate, Chonburi, Thailand", "country": "TH"},
+  "currency": "USD",
+  "incoterm": "FOB",
+  "incoterm_place": "HANOI",
+  "payment_terms": "T/T 30 days after invoice",
+  "shipped_per": "AIR FREIGHT",
+  "shipment_date": "2026-03-03",
+  "country_of_origin": "Vietnam",
+  "line_items": [
+    {
+      "line_no": 1,
+      "description": "Micro motor",
+      "part_number": "8X-000A001",
+      "quantity": {"value": "960", "unit": "PCS"},
+      "unit_price": {"amount": "5.5000", "currency": "USD"},
+      "amount": {"amount": "5280.00", "currency": "USD"},
+      "price_components": [
+        {"label": "Unit price (processing fee)", "unit_price": {"amount": "1.5000", "currency": "USD"}, "amount": {"amount": "1440.00", "currency": "USD"}},
+        {"label": "Unit price (material)", "unit_price": {"amount": "5.5000", "currency": "USD"}, "amount": {"amount": "5280.00", "currency": "USD"}}
+      ]
+    }
+  ],
+  "total_amount": {"amount": "5280.00", "currency": "USD"},
+  "amount_components": [
+    {"label": "Amount (payment)", "amount": {"amount": "1440.00", "currency": "USD"}}
+  ],
+  "total_quantity": "960",
+  "total_packages": 4,
+  "net_weight": {"value": "9.7", "unit": "KG"},
+  "gross_weight": {"value": "25.5", "unit": "KG"}
+}

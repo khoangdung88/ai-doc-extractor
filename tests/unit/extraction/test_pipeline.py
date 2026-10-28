@@ -18,7 +18,7 @@ async def test_extract_with_echo_returns_all_null_document(
 
     assert result.document_type == "invoice"
     assert result.model == "mock:echo"
-    assert result.prompt_version == "v1"
+    assert result.prompt_version == "v2"
     assert result.data["invoice_number"] is None
     assert "invoice_number missing" in result.warnings
     assert result.pages == 1
