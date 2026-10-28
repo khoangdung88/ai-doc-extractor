@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 
 from docext.core.config import Settings
-from docext.core.errors import ProviderError
+from docext.core.errors import InputTooLargeError, ProviderError
 from docext.extraction.providers._http import make_client, post_json
 from docext.extraction.providers.base import (
     ExtractionRequest,
@@ -20,20 +20,43 @@ from docext.extraction.providers.base import (
 )
 
 # Ollama defaults `num_ctx` to 4096 and silently truncates the prompt beyond it, so the context
-# window is sized per request. ~3 chars/token is a conservative estimate for mixed text + JSON.
-_CHARS_PER_TOKEN = 3
+# window is sized per request. Token counts are upper-bound estimates: ~3 ASCII chars per token,
+# 1 token per non-ASCII char (CJK, diacritics), and a flat budget per page image.
+_ASCII_CHARS_PER_TOKEN = 3
+_IMAGE_TOKENS = 1600
 _NUM_CTX_FLOOR = 4096
 _NUM_CTX_STEP = 1024
 _NUM_CTX_SLACK = 512
 
 
+def _estimate_text_tokens(text: str) -> int:
+    non_ascii = sum(1 for ch in text if ord(ch) > 127)
+    return (len(text) - non_ascii) // _ASCII_CHARS_PER_TOKEN + non_ascii
+
+
 def estimate_num_ctx(request: ExtractionRequest, settings: Settings) -> int:
+    """Context window to request from Ollama: forced override, or a prompt-sized upper bound.
+
+    Raises `InputTooLargeError` when the bound exceeds `settings.ollama_max_num_ctx`, because Ollama
+    would otherwise drop the tail of the prompt without reporting an error.
+    """
     if settings.ollama_num_ctx is not None:
         return settings.ollama_num_ctx
-    prompt_chars = len(request.system_prompt) + len(request.user_prompt)
-    needed = prompt_chars // _CHARS_PER_TOKEN + request.max_output_tokens + _NUM_CTX_SLACK
+    needed = (
+        _estimate_text_tokens(request.system_prompt)
+        + _estimate_text_tokens(request.user_prompt)
+        + len(request.images_png) * _IMAGE_TOKENS
+        + request.max_output_tokens
+        + _NUM_CTX_SLACK
+    )
     rounded = -(-needed // _NUM_CTX_STEP) * _NUM_CTX_STEP
-    return min(max(rounded, _NUM_CTX_FLOOR), settings.ollama_max_num_ctx)
+    if rounded > settings.ollama_max_num_ctx:
+        raise InputTooLargeError(
+            f"Prompt needs ~{rounded} tokens of context, above DOCEXT_OLLAMA_MAX_NUM_CTX="
+            f"{settings.ollama_max_num_ctx}",
+            details={"estimated_tokens": rounded, "max_num_ctx": settings.ollama_max_num_ctx},
+        )
+    return max(rounded, _NUM_CTX_FLOOR)
 
 
 class OllamaProvider(ModelProvider):

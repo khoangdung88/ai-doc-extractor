@@ -9,7 +9,12 @@ import httpx
 import pytest
 
 from docext.core.config import Settings
-from docext.core.errors import ProviderAuthError, ProviderError, ProviderRateLimitError
+from docext.core.errors import (
+    InputTooLargeError,
+    ProviderAuthError,
+    ProviderError,
+    ProviderRateLimitError,
+)
 from docext.extraction.providers.anthropic import AnthropicProvider
 from docext.extraction.providers.base import ExtractionRequest
 from docext.extraction.providers.ollama import OllamaProvider
@@ -109,18 +114,43 @@ async def test_ollama_sizes_num_ctx_from_prompt(settings: Settings) -> None:
     assert seen[1]["options"]["num_ctx"] % 1024 == 0
 
 
-async def test_ollama_num_ctx_honours_override_and_cap(settings: Settings) -> None:
+async def test_ollama_num_ctx_override_skips_estimate(settings: Settings) -> None:
     seen: list[dict[str, Any]] = []
     body = {"model": "llama", "message": {"content": "{}"}}
     huge = REQUEST.model_copy(update={"user_prompt": "x" * 1_000_000})
-
     forced = settings.model_copy(update={"ollama_num_ctx": 2048})
+
     await OllamaProvider(forced, client=client_returning(200, body, seen)).extract_structured(huge)
-    capped = settings.model_copy(update={"ollama_max_num_ctx": 8192})
-    await OllamaProvider(capped, client=client_returning(200, body, seen)).extract_structured(huge)
 
     assert seen[0]["options"]["num_ctx"] == 2048
-    assert seen[1]["options"]["num_ctx"] == 8192
+
+
+async def test_ollama_rejects_prompt_above_num_ctx_cap_before_calling(settings: Settings) -> None:
+    """Ollama truncates silently, so a prompt that cannot fit must fail loudly instead."""
+    seen: list[dict[str, Any]] = []
+    capped = settings.model_copy(update={"ollama_max_num_ctx": 8192})
+    too_long = REQUEST.model_copy(update={"user_prompt": "x" * 30_000})
+
+    with pytest.raises(InputTooLargeError):
+        await OllamaProvider(capped, client=client_returning(200, {}, seen)).extract_structured(
+            too_long
+        )
+    assert seen == []
+
+
+async def test_ollama_num_ctx_counts_non_ascii_chars_and_images(settings: Settings) -> None:
+    seen: list[dict[str, Any]] = []
+    body = {"model": "llama", "message": {"content": "{}"}}
+    provider = OllamaProvider(settings, client=client_returning(200, body, seen))
+    ascii_req = REQUEST.model_copy(update={"user_prompt": "a" * 9_000})
+    cjk_req = REQUEST.model_copy(update={"user_prompt": "\u6f22" * 9_000})
+    image_req = REQUEST.model_copy(update={"images_png": [b"png"] * 4})
+
+    for req in (ascii_req, cjk_req, image_req):
+        await provider.extract_structured(req)
+
+    assert seen[1]["options"]["num_ctx"] >= seen[0]["options"]["num_ctx"] + 6_000 - 1024
+    assert seen[2]["options"]["num_ctx"] >= 4 * 1600 + 4096
 
 
 async def test_ollama_uses_dedicated_timeout(settings: Settings) -> None:
