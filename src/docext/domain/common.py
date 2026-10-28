@@ -40,14 +40,29 @@ class Volume(_Value):
     unit: str = Field(default="CBM", description="CBM or CFT")
 
 
+class PriceComponent(_Value):
+    """One priced column of a line when an invoice prints several (processing fee, material)."""
+
+    label: str = Field(description="Column heading as printed, e.g. 'Processing fee'")
+    unit_price: Money | None = None
+    amount: Money | None = None
+
+
 class LineItem(_Value):
     line_no: int | None = None
     description: str | None = None
+    part_number: str | None = Field(default=None, description="Item / part / model code as printed")
     hs_code: str | None = Field(default=None, description="Digits only, 6-10 chars")
     origin_country: str | None = None
     quantity: Quantity | None = None
-    unit_price: Money | None = None
-    amount: Money | None = None
+    unit_price: Money | None = Field(
+        default=None, description="Per-unit price of the column that adds up to the invoice total"
+    )
+    amount: Money | None = Field(default=None, description="Line total = quantity x unit_price")
+    price_components: list[PriceComponent] = Field(
+        default_factory=list,
+        description="Every priced column when the invoice prints more than one; empty otherwise",
+    )
 
 
 class DateRange(_Value):

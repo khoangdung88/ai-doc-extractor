@@ -42,6 +42,17 @@ Use these exact names in schemas, prompts, and code. Add terms here before using
 | `gross_weight` / `net_weight` | With unit (`KG`/`LB`). Gross includes packaging. |
 | `volume` | `CBM` (m³) or `CFT`. | |
 
+## Invoice fields
+| Term | Meaning |
+|---|---|
+| `part_number` | Item / part / model code printed next to the line description. |
+| `price_components` | Every priced column of a line when an invoice prints several (processing-trade invoices show e.g. a processing-fee column and a material-price column). `label` is the heading as printed. |
+| `unit_price` / `amount` | The per-unit price and line total of the column that adds up to `total_amount`. `amount` must equal `quantity x unit_price` (checked, tolerance 0.5 %). |
+| `amount_components` | Other printed totals besides `total_amount`, e.g. the processing-fee total that is actually payable. |
+| `contract_number` | Sales / processing contract or PO number quoted on the invoice. |
+| `shipped_per`, `shipment_date` | Transport as printed (`AIR FREIGHT`, vessel) and the ship-on-board date. |
+| Processing trade (gia công) | Goods made from customer-supplied material; the invoice shows both the processing fee (payable) and the full material value (for customs). |
+
 ## Extraction semantics
 - **Never infer** values not on the document (e.g. do not compute totals unless the document shows them;
   put computed checks in `warnings`).
